@@ -52,6 +52,7 @@ int main(int argc, char * argv[])
 
 				Ptr<CLAHE> clahe = createCLAHE();
 				clahe->setClipLimit(40);
+				clahe->setTilesGridSize(Size(4,4));
 				clahe->apply(channels[0],channels[0]);
 
 //			        equalizeHist(channels[0], channels[0]);
@@ -70,10 +71,10 @@ int main(int argc, char * argv[])
 					{
 						bool black_flag = false;
 						//if all colors are too low (black)
-						if(bgr_channels[0].at<uchar>(i,j) < 20 && bgr_channels[1].at<uchar>(i,j) < 20 && bgr_channels[2].at<uchar>(i,j) < 20)
+						if(bgr_channels[0].at<uchar>(i,j) < 40 && bgr_channels[1].at<uchar>(i,j) < 40 && bgr_channels[2].at<uchar>(i,j) < 40)
 							black_flag = true;						
 						//else if all colors are similar and below a higher threshold (dark grey)
-  						else if(abs(bgr_channels[0].at<uchar>(i,j) - bgr_channels[1].at<uchar>(i,j)) < 20 && abs(bgr_channels[1].at<uchar>(i,j) - bgr_channels[2].at<uchar>(i,j)) < 20 && abs(bgr_channels[2].at<uchar>(i,j) - bgr_channels[0].at<uchar>(i,j)) < 20 && bgr_channels[0].at<uchar>(i,j) < 40 && bgr_channels[1].at<uchar>(i,j) < 40 && bgr_channels[2].at<uchar>(i,j) < 40)
+  						else if(abs(bgr_channels[0].at<uchar>(i,j) - bgr_channels[1].at<uchar>(i,j)) < 40 && abs(bgr_channels[1].at<uchar>(i,j) - bgr_channels[2].at<uchar>(i,j)) < 40 && abs(bgr_channels[2].at<uchar>(i,j) - bgr_channels[0].at<uchar>(i,j)) < 40 && bgr_channels[0].at<uchar>(i,j) < 60 && bgr_channels[1].at<uchar>(i,j) < 60 && bgr_channels[2].at<uchar>(i,j) < 60)
 							black_flag = true;
 						if(black_flag)
 							grey_image.at<uchar>(i,j) = 0;
@@ -83,9 +84,9 @@ int main(int argc, char * argv[])
 					}
 				
 				//can do this commented code to see blur
-				//GaussianBlur( grey_image, blur_image, Size(3, 3), 4, 4);
-				//threshold(blur_image, thresh_image, 127, 255, 0);
-				threshold(grey_image, thresh_image, 127, 255, 0);
+				GaussianBlur( grey_image, blur_image, Size(21,21),3, 3);
+				threshold(blur_image, thresh_image, 127, 255, 0);
+				//threshold(grey_image, thresh_image, 127, 255, 0);
 
 				Mat inverted_image;
 				bitwise_not(thresh_image, inverted_image);
@@ -111,16 +112,17 @@ int main(int argc, char * argv[])
 
 					if (.9 * cir < per )//threshold for circles
 					{
-						
+//						polylines(bgr_image, hull, true, Scalar(0,200,0),10, 8, 0 );
 						new_centers.push_back(center);
 						centers_newage.push_back(0);
 						for(int j = 0; j < old_centers.size(); j++)
 						{
 							if(abs(old_centers.at(j).x - center.x) < 20 && abs(old_centers.at(j).y - center.y) < 20)
 							{
-								centers_oldage.at(j) = centers_oldage.at(j)+1;
+								if(centers_oldage.at(j) <5)
+								centers_oldage.at(j) = 5;
 
-								if(centers_oldage.at(j) >= 1)
+								if(centers_oldage.at(j) >= 2)
 								{
 									polylines(bgr_image, hull, true, Scalar(0,200,0),10, 8, 0 );
 								}
@@ -128,8 +130,6 @@ int main(int argc, char * argv[])
 							else if(centers_oldage.at(j)!=0)
 							{
 								centers_oldage.at(j) = centers_oldage.at(j)-1;
-								
-
 							}
 						}
 					}
@@ -140,10 +140,10 @@ int main(int argc, char * argv[])
 				centers_oldage.clear();	
 				centers_oldage.swap(centers_newage);
 
-				imshow( "Mars", equalizedbgr_image);
+				imshow( "Mars", thresh_image);
 				imshow( "Mars2", bgr_image);	
   			}
-			key = waitKey(10);
+			key = waitKey(1);
 	}
 	return 0;
 }

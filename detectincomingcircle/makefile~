@@ -1,2 +1,2 @@
 all:
-	g++ circle_detection.cpp -o circle_detection.exe `pkg-config --cflags --libs opencv` 
+	g++ /balloon_tracking/gitfiles/ece_code/detectincomingcircle/detect_incoming_circle.cpp -o /balloon_tracking/gitfiles/ece_code/detectincomingcircle/detect_incoming_circle.exe `pkg-config --cflags --libs opencv` 
