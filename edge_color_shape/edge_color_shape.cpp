@@ -71,8 +71,8 @@ int main(int argc, char * argv[])
 				cvtColor(detected_edges,detected_edges, CV_GRAY2BGR);
 				Mat bgr_image2 = bgr_image.clone();
 
-				int skip = 2;
-				int continuity = 5;
+				int skip = 4;
+				int continuity = 4;
 				for(int i = 0; i < contours2.size(); i++)
 				{
 					int clockwise_count = 0, counterclockwise_count = 0;
@@ -83,13 +83,14 @@ int main(int argc, char * argv[])
 						Point2f point_3 = contours2[i][j + 2*skip];
 						
 						int dot_product = 
-							(point_3.x - point_2.x) * (point_2.x - point_1.x);
+							(point_3.x - point_2.x) * (point_2.x - point_1.x) + 
+							(point_3.y - point_2.y) * (point_2.y - point_1.y) ;
 						int magnitude_product = 
 						  sqrt( (point_3.x - point_2.x) * (point_3.x - point_2.x) + 
 						         (point_3.y - point_2.y) * (point_3.y - point_2.y) ) *
 						  sqrt( (point_2.x - point_1.x) * (point_2.x - point_1.x) + 
 						         (point_2.y - point_1.y) * (point_2.y - point_1.y) );
-						if(dot_product < .2 * magnitude_product || dot_product > .9 * magnitude_product)
+						if(dot_product < .2 * magnitude_product || dot_product > .95 * magnitude_product)
 						{
 							clockwise_count = 0;
 							counterclockwise_count = 0;
