@@ -139,66 +139,53 @@ int main(int argc, char * argv[])
 								}
 
 								if(black_sum / total > .2)
-									ellipse(thresh_image, rec, Scalar(0,200,0), 3,8);
-								imshow("test", thresh_image);
-							}
-						}
-
-					}
-				}
-				//find ellipse with most points in a vicinity
-				imshow("1",bgr_image2);
-			
-
-
-
-
-
-
-				
-
-
-
-				
-						new_centers.push_back(center);
-						centers_newage.push_back(0);
-						for(int j = 0; j < old_centers.size(); j++)
-						{
-							if(abs(old_centers.at(j).x - center.x) < 20 && abs(old_centers.at(j).y - center.y) < 20)
-							{
-								if(centers_oldage.at(j) <5)
-								centers_oldage.at(j) = 5;
-
-								if(centers_oldage.at(j) >= 2)
 								{
-									polylines(bgr_image, hull, true, Scalar(0,200,0),10, 8, 0 );
-									cout << 300 / radius  << "ft";//distance metric
-									if(center.x < bgr_image.size().width / 2 )
-										cout << ", left";
-									else
-										cout << ", right";
-									if(center.y < bgr_image.size().height / 2)
-										cout << ", top" << endl;
-									else
-										cout << ", bottom" << endl;
+									new_centers.push_back(center);
+									centers_newage.push_back(0);
+									for(int j = 0; j < old_centers.size(); j++)
+									{
+									if(abs(old_centers.at(j).x - center.x) < 20 && abs(old_centers.at(j).y - center.y) < 20)
+									{
+										if(centers_oldage.at(j) <5)
+										centers_oldage.at(j) = 10;
+	
+										if(centers_oldage.at(j) >= 2)
+										{
+											ellipse(bgr_image, rec, Scalar(0,200,0), 3,8);
+											cout << 300 / radius  << "ft";//distance metric
+											if(center.x < bgr_image.size().width / 2 )
+												cout << ", left";
+											else
+												cout << ", right";
+											if(center.y < bgr_image.size().height / 2)
+												cout << ", top" << endl;
+											else
+												cout << ", bottom" << endl;
+										}
+									}		
+									else if(centers_oldage.at(j)!=0)
+									{
+										centers_oldage.at(j) = centers_oldage.at(j)-1;
+									}
+									}
 								}
 							}
-							else if(centers_oldage.at(j)!=0)
-							{
-								centers_oldage.at(j) = centers_oldage.at(j)-1;
-							}
 						}
 					}
 				}
-
 				old_centers.clear();
 				old_centers.swap(new_centers);
 				centers_oldage.clear();	
-				centers_oldage.swap(centers_newage);*/
+				centers_oldage.swap(centers_newage);
+				
 
+							
+
+				
+			
 
 				imshow( "Mars2", bgr_image);	
-  			}
+  			}\
 			key = waitKey(1);
 	}
 	return 0;
