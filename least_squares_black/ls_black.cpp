@@ -113,9 +113,9 @@ int main(int argc, char * argv[])
 						//find ellipse
 						double error;
 						RotatedRect rec = fitEllipse_edit(contours2[i], error);
-						if(abs(rec.size.width - rec.size.height) < .2 * rec.size.width)
+						if(abs(rec.size.width - rec.size.height) < .3 * rec.size.width)
 						{	
-							if( error < .8)
+							if( error < .6)
 							{
 								//look for mostly black inside "circle"
 								Point2f center = CvBox2D(rec).center;
@@ -140,14 +140,15 @@ int main(int argc, char * argv[])
 
 								if(black_sum / total > .2)
 								{
+									ellipse(bgr_image2, rec, Scalar(0,200,0), 3,8);
 									new_centers.push_back(center);
 									centers_newage.push_back(0);
 									for(int j = 0; j < old_centers.size(); j++)
 									{
-									if(abs(old_centers.at(j).x - center.x) < 20 && abs(old_centers.at(j).y - center.y) < 20)
+									if(abs(old_centers.at(j).x - center.x) < 10 && abs(old_centers.at(j).y - center.y) < 20)
 									{
-										if(centers_oldage.at(j) <5)
-										centers_oldage.at(j) = 10;
+										if(centers_oldage.at(j) <40)
+										centers_oldage.at(j) = 40;
 	
 										if(centers_oldage.at(j) >= 2)
 										{
@@ -184,8 +185,9 @@ int main(int argc, char * argv[])
 				
 			
 
-				imshow( "Mars2", bgr_image);	
-  			}\
+				imshow( "debounced", bgr_image);	
+							imshow( "Mars2", bgr_image2);	
+  			}
 			key = waitKey(1);
 	}
 	return 0;
