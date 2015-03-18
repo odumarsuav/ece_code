@@ -1,0 +1,2 @@
+all:
+	g++ ls_black.cpp -o ls_black.exe `pkg-config --cflags --libs opencv` 
