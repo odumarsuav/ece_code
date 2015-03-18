@@ -75,15 +75,13 @@ int main(int argc, char * argv[])
 				findContours( detected_edges, contours2, hierarchy2, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_TC89_L1, Point(0, 0) );
 		
 				Mat bgr_image2 = bgr_image.clone();
-				int number_in_vicinity = 0;
-				int ellipse_tightness = .1;
 				for(int i = 0; i < contours2.size(); i++)
 				{
-					if(contours2[i].size() >=5){
+					if(contours2[i].size() >=10){
 						//find ellipse
 						double error;
 						RotatedRect rec = fitEllipse_edit(contours2[i], error);
-						if(abs(rec.size.width - rec.size.height) < .1 * rec.size.width)
+						if(abs(rec.size.width - rec.size.height) < .2 * rec.size.width)
 						{	
 							cout << error << " " << contours2[i].size() << " " << error / contours2[i].size()<<endl;
 							ellipse(bgr_image2, rec, Scalar(0,200,0), 3,8);
