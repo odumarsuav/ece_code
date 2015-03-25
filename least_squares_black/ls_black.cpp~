@@ -78,16 +78,16 @@ int main(int argc, char * argv[])
 	
 	imshow( "Mars", image);
 
-	Mat mat_placeholder(image.rows, image.cols, CV_8UC1);
+	Mat mat_placeholder(500, 1, CV_8UC1);
 	imshow("Tuning",mat_placeholder);
-	createTrackbar("number of constituent points", "Mars", &number_of_constituent_points, 50, NULL, 0);
-	createTrackbar("acceptable eccentricity", "Mars", &acceptable_eccentricity, 50, NULL, 0);
-	createTrackbar("least squares error", "Mars", &least_squares_error, 10, NULL, 0);
-	createTrackbar("black level", "Mars", &black_level, 255, NULL, 0);
-	createTrackbar("gray closeness", "Mars", &gray_closeness, 255, NULL, 0);
-	createTrackbar("gray_level", "Mars", &gray_level, 255, NULL, 0);
-	createTrackbar("debouncing age", "Mars", &debouncing_age, 50, NULL, 0);
-	createTrackbar("center distance", "Mars", &center_distance, 50, NULL, 0);
+	createTrackbar("number of constituent points", "Tuning", &number_of_constituent_points, 50, NULL, 0);
+	createTrackbar("acceptable eccentricity", "Tuning", &acceptable_eccentricity, 50, NULL, 0);
+	createTrackbar("least squares error", "Tuning", &least_squares_error, 10, NULL, 0);
+	createTrackbar("black level", "Tuning", &black_level, 255, NULL, 0);
+	createTrackbar("gray closeness", "Tuning", &gray_closeness, 255, NULL, 0);
+	createTrackbar("gray_level", "Tuning", &gray_level, 255, NULL, 0);
+	createTrackbar("debouncing age", "Tuning", &debouncing_age, 50, NULL, 0);
+	createTrackbar("center distance", "Tuning", &center_distance, 50, NULL, 0);
 	//createTrackbar("histogram tile", "Mars", &histogram_tile, 400, NULL, 0);
 	//createTrackbar("clip limit?", "Mars", &clip_limit, 400, NULL, 0);
 

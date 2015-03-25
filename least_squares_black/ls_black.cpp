@@ -78,7 +78,7 @@ int main(int argc, char * argv[])
 	
 	imshow( "Mars", image);
 
-	Mat mat_placeholder(image.rows, image.cols, CV_8UC1);
+	Mat mat_placeholder(1, 500, CV_8UC1);
 	imshow("Tuning",mat_placeholder);
 	createTrackbar("number of constituent points", "Tuning", &number_of_constituent_points, 50, NULL, 0);
 	createTrackbar("acceptable eccentricity", "Tuning", &acceptable_eccentricity, 50, NULL, 0);
