@@ -20,7 +20,8 @@ int main(int argc, char * argv[])
 	int acceptable_eccentricity = 5;//higher value returns more ellipses not like circles
 	int debouncing_age = 20;//longer value means debouncing picks up more circles
 	int center_distance = 10;//larger value means circles can move around but still be considered stable
-	
+	int histogram_tile = 4;
+	int clip_limit;
 
 	VideoCapture capture = VideoCapture(atoi(argv[1]));
 
@@ -37,8 +38,6 @@ int main(int argc, char * argv[])
 	Mat ycrcb_image;
 	vector<Mat> channels;
 	Ptr<CLAHE> clahe = createCLAHE();
-	clahe->setClipLimit(20);
-	clahe->setTilesGridSize(Size(4,4));	
 	Mat equalized_ycrcb_image;
 	Mat equalized_bgr_image;
 	Mat equalized_gray_image;
@@ -78,16 +77,19 @@ int main(int argc, char * argv[])
 	Point2f this_old_center;
 	
 	imshow( "Mars", image);
-	
-	createTrackbar("number of constituent points", "Mars", &number_of_constituent_points, 50, NULL, 0);
-	createTrackbar("acceptable eccentricity", "Mars", &acceptable_eccentricity, 50, NULL, 0);
-	createTrackbar("least squares error", "Mars", &least_squares_error, 10, NULL, 0);
-	createTrackbar("black level", "Mars", &black_level, 255, NULL, 0);
-	createTrackbar("gray closeness", "Mars", &gray_closeness, 255, NULL, 0);
-	createTrackbar("gray_level", "Mars", &gray_level, 255, NULL, 0);
-	createTrackbar("debouncing age", "Mars", &debouncing_age, 50, NULL, 0);
-	createTrackbar("center distance", "Mars", &center_distance, 50, NULL, 0);
 
+	Mat mat_placeholder(image.rows, image.cols, CV_8UC1);
+	imshow("Tuning",mat_placeholder);
+	createTrackbar("number of constituent points", "Tuning", &number_of_constituent_points, 50, NULL, 0);
+	createTrackbar("acceptable eccentricity", "Tuning", &acceptable_eccentricity, 50, NULL, 0);
+	createTrackbar("least squares error", "Tuning", &least_squares_error, 10, NULL, 0);
+	createTrackbar("black level", "Tuning", &black_level, 255, NULL, 0);
+	createTrackbar("gray closeness", "Tuning", &gray_closeness, 255, NULL, 0);
+	createTrackbar("gray_level", "Tuning", &gray_level, 255, NULL, 0);
+	createTrackbar("debouncing age", "Tuning", &debouncing_age, 50, NULL, 0);
+	createTrackbar("center distance", "Tuning", &center_distance, 50, NULL, 0);
+	//createTrackbar("histogram tile", "Mars", &histogram_tile, 400, NULL, 0);
+	//createTrackbar("clip limit?", "Mars", &clip_limit, 400, NULL, 0);
 
 	waitKey(1);//need some lag
 	
@@ -105,15 +107,18 @@ int main(int argc, char * argv[])
 		        split(ycrcb_image,channels);
 
 			//adaptive histogram (local contrast enhancement)
+			/*clahe->setTilesGridSize(Size(histogram_tile,histogram_tile));	
 			clahe->apply(channels[0],channels[0]);
+			clahe->setClipLimit(clip_limit);*/
 
 			//example of non-adaptive histogram (should stay commented)
-			//equalizeHist(channels[0], channels[0]);
+			equalizeHist(channels[0], channels[0]);
 
 		        merge(channels,equalized_ycrcb_image);
 
 		        cvtColor(equalized_ycrcb_image,equalized_bgr_image,CV_YCrCb2BGR);
 			cvtColor(equalized_bgr_image,equalized_gray_image,CV_BGR2GRAY);
+			imshow("histo",			equalized_bgr_image);
 			
 			GaussianBlur(equalized_gray_image, blurred_image, Size(25,25),3, 3);
 			Canny(blurred_image, edges_image, 10, 100, 3 );
@@ -169,8 +174,7 @@ int main(int argc, char * argv[])
 						//if ellipse eccentricity is low
 						ellipse_axis1 = rec_size_width;
 						ellipse_axis2 = rec_size_height;
-						cout << abs(ellipse_axis1 - ellipse_axis2)/ellipse_axis1 << endl;
-						if(abs(ellipse_axis1 - ellipse_axis2)/ ellipse_axis1 < acceptable_eccentricity )
+						if(10 * abs(ellipse_axis1 - ellipse_axis2)/ ellipse_axis1 < acceptable_eccentricity )
 						{
 							//look for mostly black inside "circle"
 							center = CvBox2D(rec).center;
