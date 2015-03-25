@@ -12,12 +12,13 @@ CvBox2D cvFitEllipse_edit( const CvArr* array,double & error );
 int main(int argc, char * argv[])
 {	
 	//tunable parameters in order of appearance in code below
-	double black_level = 20;//lower value means less pixels are considered black
-	double gray_closeness = 20;//lower value means pixels must be nearer in color to be considered true gray
-	double gray_level = 40;//lower value means less pixels are considered dark grey
-	double least_squares_error = .6;//higher value returns more circles
-	double acceptable_eccentricity = .3;//higher value returns more ellipses not like circles
-	int debouncing_age = 10;//longer value means debouncing picks up more circles
+	int black_level = 20;//lower value means less pixels are considered black
+	int gray_closeness = 20;//lower value means pixels must be nearer in color to be considered true gray
+	int gray_level = 40;//lower value means less pixels are considered dark grey
+	int number_of_constituent_points = 10;//means curves must be long enough
+	int least_squares_error = 2;//higher value returns more circles
+	int acceptable_eccentricity = 5;//higher value returns more ellipses not like circles
+	int debouncing_age = 20;//longer value means debouncing picks up more circles
 	int center_distance = 10;//larger value means circles can move around but still be considered stable
 	
 
@@ -58,8 +59,8 @@ int main(int argc, char * argv[])
 	RotatedRect rec;
  	Size2f rec_size;
 	int rec_size_width, rec_size_height;
-	int ellipse_axis1;
-	int ellipse_axis2;
+	double ellipse_axis1;
+	double ellipse_axis2;
 	Point2f center;
 	int center_x;
 	int center_y;
@@ -75,9 +76,21 @@ int main(int argc, char * argv[])
 	vector<Point2f> old_centers;
 	vector<int> old_centers_ages;
 	Point2f this_old_center;
-	 
-	waitKey(1);//need some lag
+	
+	imshow( "Mars", image);
+	
+	createTrackbar("number of constituent points", "Mars", &number_of_constituent_points, 50, NULL, 0);
+	createTrackbar("acceptable eccentricity", "Mars", &acceptable_eccentricity, 50, NULL, 0);
+	createTrackbar("least squares error", "Mars", &least_squares_error, 10, NULL, 0);
+	createTrackbar("black level", "Mars", &black_level, 255, NULL, 0);
+	createTrackbar("gray closeness", "Mars", &gray_closeness, 255, NULL, 0);
+	createTrackbar("gray_level", "Mars", &gray_level, 255, NULL, 0);
+	createTrackbar("debouncing age", "Mars", &debouncing_age, 50, NULL, 0);
+	createTrackbar("center distance", "Mars", &center_distance, 50, NULL, 0);
 
+
+	waitKey(1);//need some lag
+	
 	while(true)//escape key is 27 on Alex's linux box
 	{
 		capture>>bgr_image;//clear 5 deep buffer
@@ -141,7 +154,7 @@ int main(int argc, char * argv[])
 			number_of_contours = contour_vector.size();
 			for(i = 0; i < number_of_contours; i++)
 			{
-				if(contour_vector[i].size() >=10)
+				if(contour_vector[i].size() >=number_of_constituent_points)
 				{
 					//find least squares ellipse and associated error
 					rec = fitEllipse_edit(contour_vector[i], error);
@@ -150,12 +163,14 @@ int main(int argc, char * argv[])
 					rec_size_height = rec_size.height;
 
 					//if ellispe is a good least square fit
+
 					if(error < least_squares_error)
 					{
 						//if ellipse eccentricity is low
 						ellipse_axis1 = rec_size_width;
 						ellipse_axis2 = rec_size_height;
-						if(abs(ellipse_axis1 - ellipse_axis2) < acceptable_eccentricity * ellipse_axis1)
+						cout << abs(ellipse_axis1 - ellipse_axis2)/ellipse_axis1 << endl;
+						if(abs(ellipse_axis1 - ellipse_axis2)/ ellipse_axis1 < acceptable_eccentricity )
 						{
 							//look for mostly black inside "circle"
 							center = CvBox2D(rec).center;
@@ -239,8 +254,7 @@ int main(int argc, char * argv[])
 				old_centers_ages.push_back(2);
 			}	
 			new_centers.clear();
-			imshow( "Debounced", bgr_image);	
-			imshow( "Debug - not debounced", debug_image);//before debounce	
+			imshow( "Mars", bgr_image);	
 		}
 		waitKey(1);//need some lag
 	}
