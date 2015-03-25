@@ -1,14 +1,3 @@
-//if object is growing and it's a circle and it's black
-
-
-
-/*
-So for a simple RGB color image, HE should not be applied individually on each channel. Rather, it should be applied such that intensity values are equalized without disturbing the color balance of the image.
-*/
-
-
-
-
 #include "opencv2/opencv.hpp"
 #include <iostream>
 #include <cmath>
@@ -17,178 +6,243 @@ So for a simple RGB color image, HE should not be applied individually on each c
 using namespace std;
 using namespace cv;
 
-RotatedRect fitEllipse_edit( InputArray _points , double & error);
+RotatedRect fitEllipse_edit( InputArray _points , double & error); //edited opencv libraries
 CvBox2D cvFitEllipse_edit( const CvArr* array,double & error );
 
 int main(int argc, char * argv[])
-{
-	vector<Point2f> old_centers;
-	vector<Point2f> new_centers;
-	vector<int> centers_newage;
-	vector<int> centers_oldage;
+{	
+	//tunable parameters in order of appearance in code below
+	double black_level = 20;//lower value means less pixels are considered black
+	double gray_closeness = 20;//lower value means pixels must be nearer in color to be considered true gray
+	double gray_level = 40;//lower value means less pixels are considered dark grey
+	double least_squares_error = .6;//higher value returns more circles
+	double acceptable_eccentricity = .3;//higher value returns more ellipses not like circles
+	int debouncing_age = 10;//longer value means debouncing picks up more circles
+	int center_distance = 10;//larger value means circles can move around but still be considered stable
+	
 
 	VideoCapture capture = VideoCapture(atoi(argv[1]));
-	Mat thresh_image,bgr_image, ycrcb_image, equalizedbgr_image,blur_image,detected_edges;
 
-	
-	capture >> bgr_image;//assume blank
-	while(bgr_image.empty())
-		capture>>bgr_image;
+	//discard initial blank images
+	Mat image;
+	capture >> image;
+	while(image.empty())
+		capture>>image;
 
 
-		
-	int key = waitKey(50);
+	//declare and initialize all variables up front to save time in while loop
+	//(these are declared and initialized in order of use in the while loop because i'm ocd)
+	Mat bgr_image;
+	Mat ycrcb_image;
+	vector<Mat> channels;
+	Ptr<CLAHE> clahe = createCLAHE();
+	clahe->setClipLimit(20);
+	clahe->setTilesGridSize(Size(4,4));	
+	Mat equalized_ycrcb_image;
+	Mat equalized_bgr_image;
+	Mat equalized_gray_image;
+	Mat blurred_image;
+	Mat edges_image;
+	vector<vector<Point> > contour_vector;
+	Mat hierarchy_placeholder;
+	vector<Mat> bgr_channels;
+	int i, j;
+	Scalar color = Scalar(0,200,0);
+	int image_rows = image.rows, image_cols = image.cols;
+	Mat black_or_not_image(image.rows, image.cols, CV_8UC1);
+	bool black_flag;
+	uchar blue_pixel, green_pixel, red_pixel;
+	Mat debug_image;
+	int number_of_contours;
+	double error;
+	RotatedRect rec;
+ 	Size2f rec_size;
+	int rec_size_width, rec_size_height;
+	int ellipse_axis1;
+	int ellipse_axis2;
+	Point2f center;
+	int center_x;
+	int center_y;
+	int radius;
+	int radius_squared;
+	double number_of_black_pixels;
+	double total_number_of_pixels;
+	int j_max, k_max;
+	int k;
+	int x_displacement;
+	int y_displacement;
+	vector<Point2f> new_centers;
+	vector<Point2f> old_centers;
+	vector<int> old_centers_ages;
+	Point2f this_old_center;
+	 
+	waitKey(1);//need some lag
 
-	while(key != 27)//escape key is 27 on Alex's linux box
+	while(true)//escape key is 27 on Alex's linux box
 	{
-			capture>>bgr_image;//clear 5 deep buffer
-			capture>>bgr_image;
-			capture>>bgr_image;
-			capture>>bgr_image;
-			capture>>bgr_image;
-
-			if(!bgr_image.empty())
-			{
-				cvtColor(bgr_image, ycrcb_image, CV_BGR2YCrCb);
-				
-				vector<Mat> channels;
-			        split(ycrcb_image,channels);
-
-				Ptr<CLAHE> clahe = createCLAHE();
-				clahe->setClipLimit(20);
-				clahe->setTilesGridSize(Size(4,4));
-				clahe->apply(channels[0],channels[0]);
-
-
-//			        equalizeHist(channels[0], channels[0]);//not adaptive
-
-			        merge(channels,ycrcb_image);
-
-			        cvtColor(ycrcb_image,equalizedbgr_image,CV_YCrCb2BGR);
-								Mat hierarchy2; 
-				Mat grey_image2,blur_image2,blur_image3;
-				cvtColor(equalizedbgr_image, grey_image2, CV_BGR2GRAY);
-				GaussianBlur( grey_image2, blur_image2, Size(25,25),3, 3);
-				Canny( blur_image2, detected_edges, 10, 100, 3 );
-
-				vector<vector<Point> > contours2;
-				findContours( detected_edges, contours2, hierarchy2, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_TC89_L1, Point(0, 0) );
+		capture>>bgr_image;//clear 5 deep buffer
+		capture>>bgr_image;
+		capture>>bgr_image;
+		capture>>bgr_image;
+		capture>>bgr_image;
 		
+		if(!bgr_image.empty())
+		{
+			cvtColor(bgr_image, ycrcb_image, CV_BGR2YCrCb);
+		        split(ycrcb_image,channels);
 
-/*****************************/
-				
-				vector<Mat> bgr_channels;
-				split(equalizedbgr_image,bgr_channels);
+			//adaptive histogram (local contrast enhancement)
+			clahe->apply(channels[0],channels[0]);
 
-				Mat grey_image(equalizedbgr_image.rows, equalizedbgr_image.cols, CV_8UC1);
-				for(int i=0; i < equalizedbgr_image.rows;i++)//parameters need to be experimentally defined
-					for(int j=0; j < equalizedbgr_image.cols;j++)
-					{
-						bool black_flag = false;
-						//if all colors are too low (black)
-						if(bgr_channels[0].at<uchar>(i,j) < 20 && bgr_channels[1].at<uchar>(i,j) < 20 && bgr_channels[2].at<uchar>(i,j) < 20)
-							black_flag = true;						
-						//else if all colors are similar and below a higher threshold (dark grey)
-  						else if(abs(bgr_channels[0].at<uchar>(i,j) - bgr_channels[1].at<uchar>(i,j)) < 20 && abs(bgr_channels[1].at<uchar>(i,j) - bgr_channels[2].at<uchar>(i,j)) < 20 && abs(bgr_channels[2].at<uchar>(i,j) - bgr_channels[0].at<uchar>(i,j)) < 20 && bgr_channels[0].at<uchar>(i,j) < 40 && bgr_channels[1].at<uchar>(i,j) < 40 && bgr_channels[2].at<uchar>(i,j) < 40)
-							black_flag = true;
-						if(black_flag)
-							grey_image.at<uchar>(i,j) = 0;
-						else							
-							grey_image.at<uchar>(i,j) = 255;
-	
-					}
-				
-				//can do this commented code to see blur
-				GaussianBlur( grey_image, blur_image, Size(21,21),3, 3);
-				threshold(blur_image, thresh_image, 127, 255, 0);
+			//example of non-adaptive histogram (should stay commented)
+			//equalizeHist(channels[0], channels[0]);
 
-/*********************************/
+		        merge(channels,equalized_ycrcb_image);
 
+		        cvtColor(equalized_ycrcb_image,equalized_bgr_image,CV_YCrCb2BGR);
+			cvtColor(equalized_bgr_image,equalized_gray_image,CV_BGR2GRAY);
+			
+			GaussianBlur(equalized_gray_image, blurred_image, Size(25,25),3, 3);
+			Canny(blurred_image, edges_image, 10, 100, 3 );
+			findContours(edges_image, contour_vector, hierarchy_placeholder, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_TC89_L1, Point(0, 0) );
 
+			//find black parts of image starts here
+			
+			split(equalized_bgr_image,bgr_channels);
 
-				Mat bgr_image2 = bgr_image.clone();
-				for(int i = 0; i < contours2.size(); i++)
-				{
-					if(contours2[i].size() >=10){
-						//find ellipse
-						double error;
-						RotatedRect rec = fitEllipse_edit(contours2[i], error);
-						if(abs(rec.size.width - rec.size.height) < .2 * rec.size.width)
-						{	
-							if( error < .8)
-							{
-								//look for mostly black inside "circle"
-								Point2f center = CvBox2D(rec).center;
-								int radius = rec.size.width/2;
-								double black_sum = 0;
-								double total = 0;
-								for(int j = center.x-rec.size.width/2; j < center.x + rec.size.width/2; j++)
-								for(int k = center.y-rec.size.height/2; k <center.y +rec.size.height/2; k++)
-								{
-									int a = j-center.x;
-									int b = k-center.y;
+			for(i=0; i < image_rows;i++)
+			for(j=0; j < image_cols;j++)
+			{
 									
-									if(sqrt( a * a + b*b) < radius)
-									{
-										//circle(thresh_image,Point(j,k),1,Scalar(0,200,0),1,8,0);
-										total++;
-										
-										if(thresh_image.at<uchar>(j, k) == 0)
-											black_sum++;
-									}
-								}
-
-								if(black_sum / total > .2)
-								{
-									ellipse(bgr_image2, rec, Scalar(0,200,0), 3,8);
-									new_centers.push_back(center);
-									centers_newage.push_back(0);
-									for(int j = 0; j < old_centers.size(); j++)
-									{
-									if(abs(old_centers.at(j).x - center.x) < 10 && abs(old_centers.at(j).y - center.y) < 20)
-									{
-										if(centers_oldage.at(j) <40)
-										centers_oldage.at(j) = 40;
+				black_flag = false;
+				blue_pixel = bgr_channels[0].at<uchar>(i,j);
+				green_pixel = bgr_channels[1].at<uchar>(i,j);
+				red_pixel = bgr_channels[2].at<uchar>(i,j);
 	
-										if(centers_oldage.at(j) >= 2)
-										{
-											ellipse(bgr_image, rec, Scalar(0,200,0), 3,8);
-											cout << 300 / radius  << "ft";//distance metric
-											if(center.x < bgr_image.size().width / 2 )
-												cout << ", left";
-											else
-												cout << ", right";
-											if(center.y < bgr_image.size().height / 2)
-												cout << ", top" << endl;
-											else
-												cout << ", bottom" << endl;
-										}
-									}		
-									else if(centers_oldage.at(j)!=0)
+				//if all colors are too low (black)
+				if(blue_pixel < black_level && green_pixel < black_level && red_pixel < black_level)
+					black_flag = true;						
+				//else if all colors are similar and below a higher threshold (dark grey)
+  				else if(abs(blue_pixel - green_pixel) < gray_closeness && abs(green_pixel - red_pixel) < gray_closeness && abs(red_pixel - blue_pixel) < gray_closeness && blue_pixel < gray_level && green_pixel < gray_level && red_pixel < gray_level)
+					black_flag = true;
+				//thresholding condition applied
+				if(black_flag)
+					black_or_not_image.at<uchar>(i,j) = 0;
+				else							
+					black_or_not_image.at<uchar>(i,j) = 255;
+			}
+			
+			//find black parts of image ends here
+
+			
+			//bgr_image is with debouncing
+			//debug image holds only static circles (not debounced)
+			debug_image = bgr_image.clone();
+			number_of_contours = contour_vector.size();
+			for(i = 0; i < number_of_contours; i++)
+			{
+				if(contour_vector[i].size() >=10)
+				{
+					//find least squares ellipse and associated error
+					rec = fitEllipse_edit(contour_vector[i], error);
+					rec_size = rec.size;
+					rec_size_width = rec_size.width;
+					rec_size_height = rec_size.height;
+
+					//if ellispe is a good least square fit
+					if(error < least_squares_error)
+					{
+						//if ellipse eccentricity is low
+						ellipse_axis1 = rec_size_width;
+						ellipse_axis2 = rec_size_height;
+						if(abs(ellipse_axis1 - ellipse_axis2) < acceptable_eccentricity * ellipse_axis1)
+						{
+							//look for mostly black inside "circle"
+							center = CvBox2D(rec).center;
+							center_x = center.x;
+							center_y = center.y;
+							radius = ellipse_axis1 / 2;
+							radius_squared = radius * radius;
+							number_of_black_pixels = 0;
+							total_number_of_pixels = radius * radius * 3.14159;
+
+							j_max = center_x + rec_size_width/2;
+							k_max = center_y + rec_size_height/2;
+							for(j = center_x - rec_size_width/2; j < j_max; j++)
+							for(k = center_y - rec_size_height/2; k < k_max; k++)
+							{
+								x_displacement = j - center_x;
+								y_displacement = k - center_y;
+								
+								//if it's in the circle
+								if(x_displacement * x_displacement + y_displacement * y_displacement < radius_squared)
+								{
+									//if it's out of range add .5 to the count
+									if(j < 0 || j >=  image_rows  || k < 0 || k >= image_cols)
+										number_of_black_pixels += .5;
+									//if it's black add to the count
+									else if(black_or_not_image.at<uchar>(j, k) == 0)
+										number_of_black_pixels++;
+								}
+							}
+							//if it's a mostly black circle
+
+							if(number_of_black_pixels / total_number_of_pixels > .2)
+							{
+								ellipse(debug_image, rec, color, 3,8);//non-debounced (for debugging)
+
+								//debouncing
+								new_centers.push_back(center);
+								for(j = 0; j < old_centers.size(); j++)
+								{
+									this_old_center= old_centers.at(j);
+									if(abs(this_old_center.x - center_x) < center_distance && abs(this_old_center.y - center_y) < center_distance)
 									{
-										centers_oldage.at(j) = centers_oldage.at(j)-1;
-									}
+										//remove center from old list if it's found again
+										old_centers.erase(old_centers.begin() + j);
+										old_centers_ages.erase(old_centers_ages.begin() + j);
+										//and display the circle and coordinates
+										ellipse(bgr_image, rec, color, 3, 8);
+										
+										cout << 300 / radius  << "ft";//distance metric
+										if(center_x < image_rows / 2 )
+											cout << ", left";
+										else
+											cout << ", right";
+										if(center_y < image_cols / 2)
+											cout << ", top" << endl;
+										else
+											cout << ", bottom" << endl;
 									}
 								}
 							}
 						}
 					}
 				}
-				old_centers.clear();
-				old_centers.swap(new_centers);
-				centers_oldage.clear();	
-				centers_oldage.swap(centers_newage);
-				
 
-							
-
-				
-			
-
-				imshow( "debounced", bgr_image);	
-							imshow( "Mars2", bgr_image2);	
-  			}
-			key = waitKey(1);
+			}
+			//combine old and new centers
+			old_centers.reserve(old_centers.size() + new_centers.size()); // preallocate memory for next instruction
+			old_centers.insert(old_centers.end(), new_centers.begin(), new_centers.end());
+			for(i = 0; i < old_centers_ages.size(); i++)
+			{
+				if(old_centers_ages.at(i) == 0)
+				{
+					old_centers.erase(old_centers.begin() + i);
+					old_centers_ages.erase(old_centers_ages.begin() + i);
+				}
+				else
+					old_centers_ages.at(i) = old_centers_ages.at(i) - 1;
+			}
+			for(i = old_centers_ages.size(); i < old_centers.size(); i++)
+			{
+				old_centers_ages.push_back(2);
+			}	
+			new_centers.clear();
+			imshow( "Debounced", bgr_image);	
+			imshow( "Debug - not debounced", debug_image);//before debounce	
+		}
+		waitKey(1);//need some lag
 	}
 	return 0;
 }
@@ -368,5 +422,3 @@ CvBox2D cvFitEllipse_edit( const CvArr* array , double & error)
 
     return box;
 }
-
-
