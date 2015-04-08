@@ -8,9 +8,59 @@ using namespace cv;
 
 RotatedRect fitEllipse_edit( InputArray _points , double & error); //edited opencv libraries
 CvBox2D cvFitEllipse_edit( const CvArr* array,double & error );
+void onMouse(int event, int x, int y, int flags, void* userdata);
 
 int main(int argc, char * argv[])
-{	
+{
+
+
+	VideoCapture capture = VideoCapture(atoi(argv[1]));
+	
+	//discard initial blank images
+	Mat image;
+	capture >> image;
+	while(image.empty())
+		capture>>image;
+
+
+	//defines parameters for circle to be found
+	imshow("get_colors",image);
+
+	int userdata[3];
+	setMouseCallback( "get_colors", onMouse, userdata );
+	int color_center_x, color_center_y;
+	while(true)
+	{
+		capture>>image;//clear 5 deep buffer
+		capture>>image;
+		capture>>image;
+		capture>>image;
+		capture>>image;
+		
+
+		if(userdata[0] == 1)
+		{
+			color_center_x = userdata[1];
+			color_center_y = userdata[2];
+			circle(image, Point(userdata[1],userdata[2]), 2, Scalar(100,100,0),2,8,0);
+		}
+		if(userdata[0] == 2)
+		{
+			break;
+		}
+		imshow("get_colors",image);
+
+		waitKey(1);
+	}
+	circle(image, Point(color_center_x,color_center_y), sqrt((userdata[1] - color_center_x)*(userdata[1] - color_center_x) + (userdata[2] - color_center_y)*(userdata[2] - color_center_y)), Scalar(100,100,0),2,8,0);
+	for(int ijk = 0; ijk < 5000; ijk++)
+	{
+		imshow("get_colors",image);
+		waitKey(1);
+	}
+
+
+		
 	//tunable parameters in order of appearance in code below
 	int black_level = 20;//lower value means less pixels are considered black
 	int gray_closeness = 20;//lower value means pixels must be nearer in color to be considered true gray
@@ -23,13 +73,7 @@ int main(int argc, char * argv[])
 	int histogram_tile = 4;
 	int clip_limit;
 
-	VideoCapture capture = VideoCapture(atoi(argv[1]));
-
-	//discard initial blank images
-	Mat image;
-	capture >> image;
-	while(image.empty())
-		capture>>image;
+	
 
 
 	//declare and initialize all variables up front to save time in while loop
@@ -76,6 +120,7 @@ int main(int argc, char * argv[])
 	vector<int> old_centers_ages;
 	Point2f this_old_center;
 	
+	
 	imshow( "Mars", image);
 
 	Mat mat_placeholder(1, 500, CV_8UC1);
@@ -93,7 +138,7 @@ int main(int argc, char * argv[])
 
 	waitKey(1);//need some lag
 	
-	while(true)//escape key is 27 on Alex's linux box
+	while(true)
 	{
 		capture>>bgr_image;//clear 5 deep buffer
 		capture>>bgr_image;
@@ -439,4 +484,20 @@ CvBox2D cvFitEllipse_edit( const CvArr* array , double & error)
         box.angle -= 360;
 
     return box;
+}
+
+void onMouse(int event, int x, int y, int flags, void* userdata)
+{
+	if(event == EVENT_LBUTTONDOWN)
+	{
+		((int*)userdata)[0] = 1;
+		((int*)userdata)[1] = x;
+		((int*)userdata)[2] = y;
+	}
+	else if(event == EVENT_LBUTTONUP)
+	{
+		((int*)userdata)[0] = 2;
+		((int*)userdata)[1] = x;
+		((int*)userdata)[2] = y;
+	}		
 }
