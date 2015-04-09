@@ -12,59 +12,8 @@ void onMouse(int event, int x, int y, int flags, void* userdata);
 
 int main(int argc, char * argv[])
 {
-
-
-	VideoCapture capture = VideoCapture(atoi(argv[1]));
-	
-	//discard initial blank images
-	Mat image;
-	capture >> image;
-	while(image.empty())
-		capture>>image;
-
-
-	//defines parameters for circle to be found
-	imshow("get_colors",image);
-
-	int userdata[3];
-	setMouseCallback( "get_colors", onMouse, userdata );
-	int color_center_x, color_center_y;
-	while(true)
-	{
-		capture>>image;//clear 5 deep buffer
-		capture>>image;
-		capture>>image;
-		capture>>image;
-		capture>>image;
-		
-
-		if(userdata[0] == 1)
-		{
-			color_center_x = userdata[1];
-			color_center_y = userdata[2];
-			circle(image, Point(userdata[1],userdata[2]), 2, Scalar(100,100,0),2,8,0);
-		}
-		if(userdata[0] == 2)
-		{
-			break;
-		}
-		imshow("get_colors",image);
-
-		waitKey(1);
-	}
-	circle(image, Point(color_center_x,color_center_y), sqrt((userdata[1] - color_center_x)*(userdata[1] - color_center_x) + (userdata[2] - color_center_y)*(userdata[2] - color_center_y)), Scalar(100,100,0),2,8,0);
-	for(int ijk = 0; ijk < 5000; ijk++)
-	{
-		imshow("get_colors",image);
-		waitKey(1);
-	}
-
-
-		
 	//tunable parameters in order of appearance in code below
-	int black_level = 20;//lower value means less pixels are considered black
-	int gray_closeness = 20;//lower value means pixels must be nearer in color to be considered true gray
-	int gray_level = 40;//lower value means less pixels are considered dark grey
+	int color_closeness = 20;//lower value means pixels must be nearer in color
 	int number_of_constituent_points = 10;//means curves must be long enough
 	int least_squares_error = 2;//higher value returns more circles
 	int acceptable_eccentricity = 5;//higher value returns more ellipses not like circles
@@ -78,7 +27,24 @@ int main(int argc, char * argv[])
 
 	//declare and initialize all variables up front to save time in while loop
 	//(these are declared and initialized in order of use in the while loop because i'm ocd)
+
+	VideoCapture capture = VideoCapture(atoi(argv[1]));
+	
+	//discard initial blank images
 	Mat bgr_image;
+	capture >> bgr_image;
+	while(bgr_image.empty())
+		capture>>bgr_image;
+
+	int userdata[3];
+	Scalar color = Scalar(0,200,0);
+	int color_center_x, color_center_y;
+	int color_radius;
+	int i, j;
+	int color_x_displacement, color_y_displacement;
+	int b_sum, g_sum, r_sum;
+	int total_sum;
+	int b_average, g_average, r_average;
 	Mat ycrcb_image;
 	vector<Mat> channels;
 	Ptr<CLAHE> clahe = createCLAHE();
@@ -89,11 +55,8 @@ int main(int argc, char * argv[])
 	Mat edges_image;
 	vector<vector<Point> > contour_vector;
 	Mat hierarchy_placeholder;
-	vector<Mat> bgr_channels;
-	int i, j;
-	Scalar color = Scalar(0,200,0);
-	int image_rows = image.rows, image_cols = image.cols;
-	Mat black_or_not_image(image.rows, image.cols, CV_8UC1);
+	int image_rows = bgr_image.rows, image_cols = bgr_image.cols;
+	Mat black_or_not_image(image_rows, image_cols, CV_8UC1);
 	bool black_flag;
 	uchar blue_pixel, green_pixel, red_pixel;
 	Mat debug_image;
@@ -120,17 +83,89 @@ int main(int argc, char * argv[])
 	vector<int> old_centers_ages;
 	Point2f this_old_center;
 	
+
+	//defines parameters for circle to be found
+	imshow("get colors",bgr_image);
+
+
+	setMouseCallback("get colors", onMouse, userdata );
 	
-	imshow( "Mars", image);
+	while(true)
+	{
+		capture>>bgr_image;//clear 5 deep buffer
+		capture>>bgr_image;
+		capture>>bgr_image;
+		capture>>bgr_image;
+		capture>>bgr_image;
+		
+		cvtColor(bgr_image, ycrcb_image, CV_BGR2YCrCb);
+		split(ycrcb_image,channels);
+
+		equalizeHist(channels[0], channels[0]);
+
+	        merge(channels,equalized_ycrcb_image);
+
+	        cvtColor(equalized_ycrcb_image,equalized_bgr_image,CV_YCrCb2BGR);
+
+		if(userdata[0] == 1)
+		{
+			color_center_x = userdata[1];
+			color_center_y = userdata[2];
+			circle(equalized_bgr_image, Point(userdata[1],userdata[2]), 2, color,2,8,0);
+		}
+		if(userdata[0] == 2)
+		{
+			break;
+		}
+
+		imshow("get colors",equalized_bgr_image);
+		
+		waitKey(1);
+	}
+	color_radius = (int) sqrt(((double)(userdata[1] - color_center_x)*(userdata[1] - color_center_x) + (userdata[2] - color_center_y)*(userdata[2] - color_center_y)));
+		
+	//find average rgb values for object
+	b_sum = 0;
+	g_sum = 0;
+	r_sum = 0;
+	total_sum = 0;
+	for(i =  color_center_x - color_radius; i < color_center_x + color_radius; i++)
+	{
+	for(j =  color_center_y - color_radius; j < color_center_y + color_radius; j++)
+	{
+
+		color_x_displacement = i - color_center_x;
+		color_y_displacement = j - color_center_y;
+		//if it's in the circle
+		if(color_x_displacement * color_x_displacement + color_y_displacement * color_y_displacement < color_radius * color_radius)
+		{
+		
+			b_sum += equalized_bgr_image.at<cv::Vec3b>(j,i)[0];
+			g_sum += equalized_bgr_image.at<cv::Vec3b>(j,i)[1];
+			r_sum += equalized_bgr_image.at<cv::Vec3b>(j,i)[2];
+			
+			equalized_bgr_image.at<cv::Vec3b>(j,i)[0] = 0;
+			equalized_bgr_image.at<cv::Vec3b>(j,i)[1] = 200;
+			equalized_bgr_image.at<cv::Vec3b>(j,i)[2] = 0;
+			
+			total_sum++;
+		}
+	}}
+	b_average = b_sum / total_sum;
+	g_average = g_sum / total_sum;
+	r_average = r_sum / total_sum;
+	imshow("get colors", equalized_bgr_image);		
+	waitKey(-1);
+	destroyWindow("get colors");
+
+	imshow( "Mars", bgr_image);
 
 	Mat mat_placeholder(1, 500, CV_8UC1);
 	imshow("Tuning",mat_placeholder);
 	createTrackbar("number of constituent points", "Tuning", &number_of_constituent_points, 50, NULL, 0);
 	createTrackbar("acceptable eccentricity", "Tuning", &acceptable_eccentricity, 50, NULL, 0);
 	createTrackbar("least squares error", "Tuning", &least_squares_error, 10, NULL, 0);
-	createTrackbar("black level", "Tuning", &black_level, 255, NULL, 0);
-	createTrackbar("gray closeness", "Tuning", &gray_closeness, 255, NULL, 0);
-	createTrackbar("gray_level", "Tuning", &gray_level, 255, NULL, 0);
+	createTrackbar("color closeness", "Tuning", &color_closeness, 255, NULL, 0);
 	createTrackbar("debouncing age", "Tuning", &debouncing_age, 50, NULL, 0);
 	createTrackbar("center distance", "Tuning", &center_distance, 50, NULL, 0);
 	//createTrackbar("histogram tile", "Mars", &histogram_tile, 400, NULL, 0);
@@ -169,24 +204,21 @@ int main(int argc, char * argv[])
 			Canny(blurred_image, edges_image, 10, 100, 3 );
 			findContours(edges_image, contour_vector, hierarchy_placeholder, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_TC89_L1, Point(0, 0) );
 
-			//find black parts of image starts here
-			
-			split(equalized_bgr_image,bgr_channels);
+			//find color parts of inner circles starts here
 
 			for(i=0; i < image_rows;i++)
 			for(j=0; j < image_cols;j++)
 			{
 									
 				black_flag = false;
-				blue_pixel = bgr_channels[0].at<uchar>(i,j);
-				green_pixel = bgr_channels[1].at<uchar>(i,j);
-				red_pixel = bgr_channels[2].at<uchar>(i,j);
-	
-				//if all colors are too low (black)
-				if(blue_pixel < black_level && green_pixel < black_level && red_pixel < black_level)
-					black_flag = true;						
-				//else if all colors are similar and below a higher threshold (dark grey)
-  				else if(abs(blue_pixel - green_pixel) < gray_closeness && abs(green_pixel - red_pixel) < gray_closeness && abs(red_pixel - blue_pixel) < gray_closeness && blue_pixel < gray_level && green_pixel < gray_level && red_pixel < gray_level)
+
+				
+				blue_pixel = equalized_bgr_image.at<cv::Vec3b>(i,j)[0];
+				green_pixel = equalized_bgr_image.at<cv::Vec3b>(i,j)[1];
+				red_pixel = equalized_bgr_image.at<cv::Vec3b>(i,j)[2];
+				
+				//if colors are close to extracted from target image within threshold
+  				if(abs(blue_pixel - b_average) < color_closeness && abs(green_pixel - g_average) < color_closeness && abs(red_pixel - r_average) < color_closeness)
 					black_flag = true;
 				//thresholding condition applied
 				if(black_flag)
@@ -499,5 +531,6 @@ void onMouse(int event, int x, int y, int flags, void* userdata)
 		((int*)userdata)[0] = 2;
 		((int*)userdata)[1] = x;
 		((int*)userdata)[2] = y;
+		cout << "bye" << endl;
 	}		
 }
