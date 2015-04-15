@@ -14,7 +14,7 @@ int main(int argc, char * argv[])
 {
 	//tunable parameters in order of appearance in code below
 	int color_closeness = 20;//lower value means pixels must be nearer in color
-	int number_of_constituent_points = 10;//means curves must be long enough
+	int number_of_constituent_points = 0;//means curves must be long enough
 	int least_squares_error = 2;//higher value returns more circles
 	int acceptable_eccentricity = 5;//higher value returns more ellipses not like circles
 	int debouncing_age = 20;//longer value means debouncing picks up more circles
@@ -89,7 +89,16 @@ int main(int argc, char * argv[])
 
 
 	setMouseCallback("get colors", onMouse, userdata );
-	
+	/*while(true)
+	{
+		capture>>bgr_image;//clear 5 deep buffer
+		capture>>bgr_image;
+		capture>>bgr_image;
+		capture>>bgr_image;
+		capture>>bgr_image;
+		imshow("hi",bgr_image);
+		waitKey(10);
+	}*/	
 	while(true)
 	{
 		capture>>bgr_image;//clear 5 deep buffer
@@ -166,9 +175,8 @@ int main(int argc, char * argv[])
 	createTrackbar("acceptable eccentricity", "Tuning", &acceptable_eccentricity, 50, NULL, 0);
 	createTrackbar("least squares error", "Tuning", &least_squares_error, 10, NULL, 0);
 	createTrackbar("color closeness", "Tuning", &color_closeness, 255, NULL, 0);
-	createTrackbar("gray_level", "Tuning", &gray_level, 255, NULL, 0);
 	createTrackbar("debouncing age", "Tuning", &debouncing_age, 50, NULL, 0);
-	createTrackbar("center distance", "Tuning", &center_distance, 50, NULL, 0);
+	createTrackbar("debouncing distance", "Tuning", &center_distance, 50, NULL, 0);
 	//createTrackbar("histogram tile", "Mars", &histogram_tile, 400, NULL, 0);
 	//createTrackbar("clip limit?", "Mars", &clip_limit, 400, NULL, 0);
 
@@ -199,7 +207,6 @@ int main(int argc, char * argv[])
 
 		        cvtColor(equalized_ycrcb_image,equalized_bgr_image,CV_YCrCb2BGR);
 			cvtColor(equalized_bgr_image,equalized_gray_image,CV_BGR2GRAY);
-			imshow("histo",			equalized_bgr_image);
 			
 			GaussianBlur(equalized_gray_image, blurred_image, Size(25,25),3, 3);
 			Canny(blurred_image, edges_image, 10, 100, 3 );
@@ -227,9 +234,8 @@ int main(int argc, char * argv[])
 				else							
 					black_or_not_image.at<uchar>(i,j) = 255;
 			}
-			
-			//find black parts of image ends here
 
+			imshow("bw", black_or_not_image);
 			
 			//bgr_image is with debouncing
 			//debug image holds only static circles (not debounced)
@@ -237,7 +243,7 @@ int main(int argc, char * argv[])
 			number_of_contours = contour_vector.size();
 			for(i = 0; i < number_of_contours; i++)
 			{
-				if(contour_vector[i].size() >=number_of_constituent_points)
+				if(contour_vector[i].size() >=number_of_constituent_points+5)
 				{
 					//find least squares ellipse and associated error
 					rec = fitEllipse_edit(contour_vector[i], error);
