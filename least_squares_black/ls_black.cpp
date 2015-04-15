@@ -286,7 +286,7 @@ int main(int argc, char * argv[])
 									if(j < 0 || j >=  image_rows  || k < 0 || k >= image_cols)
 										number_of_black_pixels += .5;
 									//if it's black add to the count
-									else if(black_or_not_image.at<uchar>(j, k) == 0)
+									else if(black_or_not_image.at<uchar>(k, j) == 0)
 										number_of_black_pixels++;
 								}
 							}
