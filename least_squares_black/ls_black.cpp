@@ -14,6 +14,7 @@ int main(int argc, char * argv[])
 {
 	//tunable parameters in order of appearance in code below
 	int color_closeness = 20;//lower value means pixels must be nearer in color
+	int color_contained = 10;//lower value means pixels must be nearer in color
 	int number_of_constituent_points = 0;//means curves must be long enough
 	int least_squares_error = 2;//higher value returns more circles
 	int acceptable_eccentricity = 5;//higher value returns more ellipses not like circles
@@ -175,6 +176,7 @@ int main(int argc, char * argv[])
 	createTrackbar("acceptable eccentricity", "Tuning", &acceptable_eccentricity, 50, NULL, 0);
 	createTrackbar("least squares error", "Tuning", &least_squares_error, 10, NULL, 0);
 	createTrackbar("color closeness", "Tuning", &color_closeness, 255, NULL, 0);
+	createTrackbar("color contained", "Tuning", &color_contained, 50, NULL, 0);
 	createTrackbar("debouncing age", "Tuning", &debouncing_age, 50, NULL, 0);
 	createTrackbar("debouncing distance", "Tuning", &center_distance, 50, NULL, 0);
 	//createTrackbar("histogram tile", "Mars", &histogram_tile, 400, NULL, 0);
@@ -290,7 +292,7 @@ int main(int argc, char * argv[])
 							}
 							//if it's a mostly black circle
 
-							if(number_of_black_pixels / total_number_of_pixels > .2)
+							if(number_of_black_pixels / total_number_of_pixels > ((double) color_contained) / 10)
 							{
 								ellipse(debug_image, rec, color, 3,8);//non-debounced (for debugging)
 
