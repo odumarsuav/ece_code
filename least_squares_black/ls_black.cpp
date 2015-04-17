@@ -291,11 +291,9 @@ int main(int argc, char * argv[])
 								}
 							}
 							//if it's a mostly black circle
-
-							if(number_of_black_pixels / total_number_of_pixels > ((double) color_contained) / 10)
+							//non-debounced (for debugging)	
+							if(number_of_black_pixels / total_number_of_pixels > ((double) color_contained) / 10 )
 							{
-								ellipse(debug_image, rec, color, 3,8);//non-debounced (for debugging)
-
 								//debouncing
 								new_centers.push_back(center);
 								for(j = 0; j < old_centers.size(); j++)
@@ -339,10 +337,10 @@ int main(int argc, char * argv[])
 				else
 					old_centers_ages.at(i) = old_centers_ages.at(i) - 1;
 			}
-			for(i = old_centers_ages.size(); i < old_centers.size(); i++)
+			for(i = 0; i < new_centers.size(); i++)
 			{
-				old_centers_ages.push_back(2);
-			}	
+				old_centers_ages.push_back(debouncing_age);
+			}
 			new_centers.clear();
 			imshow( "Mars", bgr_image);	
 		}
