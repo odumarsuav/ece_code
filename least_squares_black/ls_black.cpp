@@ -212,7 +212,9 @@ int main(int argc, char * argv[])
 			
 			GaussianBlur(equalized_gray_image, blurred_image, Size(25,25),3, 3);
 			Canny(blurred_image, edges_image, 10, 100, 3 );
-			findContours(edges_image, contour_vector, hierarchy_placeholder, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_TC89_L1, Point(0, 0) );
+
+			findContours(edges_image, contour_vector, hierarchy_placeholder, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0) );
+
 
 			//find color parts of inner circles starts here
 
