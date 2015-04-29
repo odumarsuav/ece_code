@@ -12,6 +12,8 @@ void onMouse(int event, int x, int y, int flags, void* userdata);
 
 int main(int argc, char * argv[])
 {
+	double object_radius = atof(argv[2]);
+	cout << object_radius<<endl;
 	//tunable parameters in order of appearance in code below
 	int color_closeness = 20;//lower value means pixels must be nearer in color
 	int color_contained = 10;//lower value means pixels must be nearer in color
@@ -295,7 +297,7 @@ int main(int argc, char * argv[])
 							}
 							//if it's a mostly black circle
 							//non-debounced (for debugging)	
-							if(number_of_black_pixels / total_number_of_pixels > ((double) color_contained) / 10 )
+							if(number_of_black_pixels / total_number_of_pixels > ((double) color_contained) / 50 )
 							{
 								//debouncing
 								new_centers.push_back(center);
@@ -310,7 +312,7 @@ int main(int argc, char * argv[])
 										//and display the circle and coordinates
 										ellipse(bgr_image, rec, color, 3, 8);
 										
-										cout << 300 / radius  << "ft";//distance metric
+										cout << 300 * object_radius / radius  << "ft";//distance metric
 										if(center_x < image_rows / 2 )
 											cout << ", left";
 										else
@@ -509,7 +511,7 @@ CvBox2D cvFitEllipse_edit( const CvArr* array , double & error)
     rp[3] = fabs(gfp[0] + gfp[1] + t);
     if( rp[3] > min_eps )
         rp[3] = sqrt(2.0 / rp[3]);
-
+\
     box.center.x = (float)rp[0] + c.x;
     box.center.y = (float)rp[1] + c.y;
     box.size.width = (float)(rp[2]*2);
