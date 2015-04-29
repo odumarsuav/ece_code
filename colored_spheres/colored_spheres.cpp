@@ -13,7 +13,6 @@ void onMouse(int event, int x, int y, int flags, void* userdata);
 int main(int argc, char * argv[])
 {
 	double object_radius = atof(argv[2]);
-	cout << object_radius<<endl;
 	//tunable parameters in order of appearance in code below
 	int color_closeness = 20;//lower value means pixels must be nearer in color
 	int color_contained = 10;//lower value means pixels must be nearer in color
@@ -313,14 +312,18 @@ int main(int argc, char * argv[])
 										ellipse(bgr_image, rec, color, 3, 8);
 										
 										cout << 300 * object_radius / radius  << "ft";//distance metric
-										if(center_x < image_rows / 2 )
+										if(center_x < image_cols / 3 )
 											cout << ", left";
-										else
+										else if(center_x > 2*image_cols / 3 )
 											cout << ", right";
-										if(center_y < image_cols / 2)
-											cout << ", top" << endl;
 										else
+											cout << ", middle";
+										if(center_y < image_rows / 3)
+											cout << ", top" << endl;
+										else if(center_y > 2*image_rows / 3)
 											cout << ", bottom" << endl;
+										else
+											cout << ", middle" << endl;
 									}
 								}
 							}
